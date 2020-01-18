@@ -1,0 +1,1 @@
+## Windows cryptography demonstration with GUI using API CNG and Qt QML
