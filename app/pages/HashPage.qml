@@ -3,11 +3,16 @@ import QtQuick.Controls 2.5
 import QtQuick.Layouts 1.12
 
 import backend 1.0
+import "qrc:/dialogs/"
 
 Page {
 
     Backend {
         id: backend
+    }
+
+    WaitDialog {
+        id: dlgWait
     }
 
     ColumnLayout {
@@ -113,13 +118,19 @@ Page {
         target: backend
 
         onNotifyHashAlsEnumComplete: {
+            dlgWait.close();
             console.log(err)
             console.log(alg_id_list)
-            cbHashAlgs.model = alg_id_list
+            if (err === 0) {
+                cbHashAlgs.model = alg_id_list;
+            } else {
+                console.log("error: " + err)
+            }
         }
     }
 
     Component.onCompleted: {
+        dlgWait.open();
         backend.enumHashAlgorithms();
     }
 }

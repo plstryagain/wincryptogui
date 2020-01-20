@@ -4,5 +4,6 @@
         <file>qtquickcontrols2.conf</file>
         <file>pages/HomePage.qml</file>
         <file>pages/HashPage.qml</file>
+        <file>dialogs/WaitDialog.qml</file>
     </qresource>
 </RCC>
