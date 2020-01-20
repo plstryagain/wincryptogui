@@ -2,6 +2,7 @@
 #define WORKER_H
 
 #include <QObject>
+#include <QHash>
 
 class Worker : public QObject
 {
@@ -12,10 +13,15 @@ public:
 
 signals:
     void notifyWorkerFinished();
-    void notifyHashAlsEnumComplete(long err, QStringList alg_id_list);
+    void notifyWorkerHashAlsEnumComplete(int err, QStringList alg_id_list);
 
 public:
-    void enumHashAlgorithms();
+    void setParams(const QHash<QString, QString>& params);
+    void startEnumHashAlgorithms();
+    void startCalculateHash();
+
+private:
+    QHash<QString, QString> params_;
 };
 
 #endif // WORKER_H

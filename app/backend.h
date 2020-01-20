@@ -10,10 +10,11 @@ public:
     explicit Backend(QObject *parent = nullptr);
 
 signals:
-    void notifyHashAlsEnumComplete(long err, QStringList alg_id_list);
+    void notifyHashAlsEnumComplete(int err, QStringList alg_id_list);
 
 public slots:
     void enumHashAlgorithms();
+    void calculateHash(const QString& path, const bool is_dir, const QString& alg_id);
 
 };
 

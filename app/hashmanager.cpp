@@ -2,6 +2,8 @@
 
 #include <QDebug>
 
+#include <memory>
+
 HashManager::HashManager()
 {
 
@@ -9,7 +11,9 @@ HashManager::HashManager()
 
 HashManager::~HashManager()
 {
-
+    if (hAlg_) {
+        BCryptCloseAlgorithmProvider(hAlg_, 0);
+    }
 }
 
 NTSTATUS HashManager::enumAlgorithms(QStringList& alg_id_list)
@@ -30,4 +34,14 @@ NTSTATUS HashManager::enumAlgorithms(QStringList& alg_id_list)
     }
 
     return ERROR_SUCCESS;
+}
+
+NTSTATUS HashManager::init(const QString &alg_id)
+{
+    auto buf = std::make_unique<wchar_t[]>(static_cast<size_t>(alg_id.size()) + 1);
+    int len = alg_id.toWCharArray(buf.get());
+    if (!len) {
+        return ERROR_BAD_LENGTH;
+    }
+    return BCryptOpenAlgorithmProvider(&hAlg_, buf.get(), nullptr, 0);
 }
