@@ -36,6 +36,7 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 HEADERS += \
     backend.h \
     constants.h \
+    errors.h \
     hashmanager.h \
     worker.h
 

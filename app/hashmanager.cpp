@@ -16,7 +16,7 @@ HashManager::~HashManager()
     }
 }
 
-NTSTATUS HashManager::enumAlgorithms(QStringList& alg_id_list)
+NTSTATUS HashManager::enumAlgorithms(QStringList& alg_id_list) const
 {
     ULONG alg_count = 0;
     BCRYPT_ALGORITHM_IDENTIFIER* algs_id = nullptr;
@@ -44,4 +44,32 @@ NTSTATUS HashManager::init(const QString &alg_id)
         return ERROR_BAD_LENGTH;
     }
     return BCryptOpenAlgorithmProvider(&hAlg_, buf.get(), nullptr, 0);
+}
+
+unsigned long HashManager::getHashSize() const
+{
+    unsigned long hash_size = 0;
+    unsigned long res = 0;
+    BCryptGetProperty(hAlg_, BCRYPT_HASH_LENGTH, reinterpret_cast<uchar*>(&hash_size), sizeof(hash_size), &res, 0);
+    return hash_size;
+}
+
+NTSTATUS HashManager::createHash()
+{
+    return BCryptCreateHash(hAlg_, &hHash_, nullptr, 0, nullptr, 0, 0);
+}
+
+NTSTATUS HashManager::stepHash(uchar* data, ulong size) const
+{
+    return BCryptHashData(hHash_, data, size, 0);
+}
+
+NTSTATUS HashManager::finishHash(uchar* result, ulong size) const
+{
+    return BCryptFinishHash(hHash_, result, size, 0);
+}
+
+NTSTATUS HashManager::destroyHash()
+{
+    return BCryptDestroyHash(hHash_);
 }

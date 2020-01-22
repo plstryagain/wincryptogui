@@ -16,6 +16,7 @@ Page {
     }
 
     ColumnLayout {
+        id: mainLayout
         anchors.fill: parent
         anchors.margins: 10
         spacing: 10
@@ -86,6 +87,7 @@ Page {
                     TextField {
                         Layout.fillWidth: true
                         id: tfChooseFile
+                        text: "D:\\ad.png"
 
                         ToolTip {
                             id: ttChooseFile
@@ -121,17 +123,21 @@ Page {
                         return;
                     }
                     let alg_id = cbHashAlgs.currentText;
-                    console.log(cbHashAlgs.currentIndex)
+                    dlgWait.open();
                     backend.calculateHash(tfChooseFile.text, is_dir, alg_id);
                 }
             }
         }
 
-        TextArea {
-            id: txtResult
+        ScrollView {
+            id: view
             Layout.fillHeight: true
             Layout.fillWidth: true
-            readOnly: true
+            TextArea {
+                id: txtResult
+                implicitWidth: 100
+                readOnly: true
+            }
         }
     }
 
@@ -140,12 +146,21 @@ Page {
 
         onNotifyHashAlsEnumComplete: {
             dlgWait.close();
-            console.log(err)
-            console.log(alg_id_list)
             if (err === 0) {
                 cbHashAlgs.model = alg_id_list;
             } else {
                 console.log("error: " + err)
+            }
+        }
+
+        onNotifyOneHashCalculated: {
+            dlgWait.close();
+            if (err === 0) {
+                let str = "For file: " + file_name + "\nAlgorithm: " + alg_id + "\nHash: " + hash + "\n";
+                txtResult.append(str);
+            } else {
+                let str = "For file: " + file_name + "\nAlgorithm: " + alg_id + "\nError: " + err + "\n";
+                txtResult.append(str);
             }
         }
     }

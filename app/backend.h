@@ -11,6 +11,7 @@ public:
 
 signals:
     void notifyHashAlsEnumComplete(int err, QStringList alg_id_list);
+    void notifyOneHashCalculated(int err, QString alg_id, QString file_name, QString hash);
 
 public slots:
     void enumHashAlgorithms();

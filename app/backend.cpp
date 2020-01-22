@@ -18,7 +18,7 @@ void Backend::enumHashAlgorithms()
     connect(thread, &QThread::started, worker, &Worker::startEnumHashAlgorithms);
     connect(worker, &Worker::notifyWorkerFinished, thread, &QThread::quit);
     connect(worker, &Worker::notifyWorkerFinished, worker, &Worker::deleteLater);
-    connect(worker, &Worker::notifyWorkerHashAlsEnumComplete, this, &Backend::notifyHashAlsEnumComplete);
+    connect(worker, &Worker::notifyWorkerHashAlgsEnumComplete, this, &Backend::notifyHashAlsEnumComplete);
     connect(thread, &QThread::finished, thread, &QThread::deleteLater);
     thread->start();
 }
@@ -34,6 +34,7 @@ void Backend::calculateHash(const QString &path, const bool is_dir, const QStrin
     worker->setParams(params);
     worker->moveToThread(thread);
     connect(thread, &QThread::started, worker, &Worker::startCalculateHash);
+    connect(worker, &Worker::notifyWorkerOneHashCalculated, this, &Backend::notifyOneHashCalculated);
     connect(worker, &Worker::notifyWorkerFinished, thread, &QThread::quit);
     connect(worker, &Worker::notifyWorkerFinished, worker, &Worker::deleteLater);
     connect(thread, &QThread::finished, thread, &QThread::deleteLater);
