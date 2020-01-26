@@ -4,6 +4,9 @@
 
 #include <QDebug>
 #include <QFile>
+#include <QUrl>
+#include <QDir>
+#include <QDirIterator>
 
 Worker::Worker(QObject *parent) : QObject(parent)
 {
@@ -30,11 +33,13 @@ void Worker::startEnumHashAlgorithms()
 
 void Worker::startCalculateHash()
 {
-    QString path = params_[HASH_PARAM::PATH];
+    /* QML FileDialog return path that begins with "file:///" */
+    QString path = QUrl(params_[HASH_PARAM::PATH]).toLocalFile();
     QString alg_id = params_[HASH_PARAM::ALG_ID];
     QString is_dir = params_[HASH_PARAM::IS_DIR];
     if (path.isEmpty() || alg_id.isEmpty() || is_dir.isEmpty()) {
         qDebug() << "invalid arguments";
+        emit notifyWorkerOneHashCalculated(ERRORS::INVALID_PARAMETERS, alg_id, "", "");
         emit notifyWorkerFinished();
         return;
     }
@@ -58,8 +63,61 @@ void Worker::startCalculateHash()
         qDebug() << hash.toHex();
         emit notifyWorkerOneHashCalculated(static_cast<int>(status), alg_id, path, hash.toHex());
     } else {
-
+        QDirIterator it(path, QDir::Files, QDirIterator::Subdirectories);
+        while (it.hasNext()) {
+            QByteArray hash;
+            hash.resize(static_cast<int>(hash_size));
+            QString cur_path = it.next();
+            status = calcualteHash(hm, cur_path, hash);
+            qDebug() << hash.toHex();
+            emit notifyWorkerOneHashCalculated(static_cast<int>(status), alg_id, cur_path, hash.toHex());
+        }
     }
+    emit notifyWorkerFinished();
+}
+
+void Worker::startCompareFiles()
+{
+    QString alg_id = params_[HASH_PARAM::ALG_ID];
+    QString first_file = QUrl(params_[HASH_PARAM::FIRST_FILE]).toLocalFile();
+    QString second_file = QUrl(params_[HASH_PARAM::SECOND_FILE]).toLocalFile();
+    if (alg_id.isEmpty() || first_file.isEmpty() || second_file.isEmpty()) {
+        qDebug() << "Invalid parameters";
+        emit notifyWorkerFilesCompared(ERRORS::INVALID_PARAMETERS, "", "", false);
+        emit notifyWorkerFinished();
+        return;
+    }
+    HashManager hm;
+    NTSTATUS status = hm.init(alg_id);
+    if (status != ERROR_SUCCESS) {
+        emit notifyWorkerFilesCompared(static_cast<int>(status), "", "", false);
+        emit notifyWorkerFinished();
+        return;
+    }
+    unsigned long hash_size = hm.getHashSize();
+    if (hash_size == 0) {
+        emit notifyWorkerFilesCompared(static_cast<int>(status), "", "", false);
+        emit notifyWorkerFinished();
+        return;
+    }
+    QByteArray first_hash;
+    first_hash.resize(static_cast<int>(hash_size));
+    status = calcualteHash(hm, first_file, first_hash);
+    if (status != ERROR_SUCCESS) {
+        emit notifyWorkerFilesCompared(static_cast<int>(status), "", "", false);
+        emit notifyWorkerFinished();
+        return;
+    }
+    QByteArray second_hash;
+    second_hash.resize(static_cast<int>(hash_size));
+    status = calcualteHash(hm, second_file, second_hash);
+    if (status != ERROR_SUCCESS) {
+        emit notifyWorkerFilesCompared(static_cast<int>(status), "", "", false);
+        emit notifyWorkerFinished();
+        return;
+    }
+    bool is_equal = first_hash == second_hash;
+    emit notifyWorkerFilesCompared(ERRORS::SUCCESS, first_hash.toHex(), second_hash.toHex(), is_equal);
     emit notifyWorkerFinished();
 }
 

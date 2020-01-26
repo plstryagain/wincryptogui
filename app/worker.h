@@ -17,11 +17,13 @@ signals:
     void notifyWorkerFinished();
     void notifyWorkerHashAlgsEnumComplete(int err, QStringList alg_id_list);
     void notifyWorkerOneHashCalculated(int err, QString alg_id, QString file_name, QString hash);
+    void notifyWorkerFilesCompared(int err, QString first_hash, QString second_hash, bool is_equal);
 
 public:
     void setParams(const QHash<QString, QString>& params);
     void startEnumHashAlgorithms();
     void startCalculateHash();
+    void startCompareFiles();
 
 private:
     long calcualteHash(HashManager &hm, const QString& file_path, QByteArray& hash);

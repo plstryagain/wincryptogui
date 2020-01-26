@@ -37,6 +37,26 @@ void Backend::calculateHash(const QString &path, const bool is_dir, const QStrin
     connect(worker, &Worker::notifyWorkerOneHashCalculated, this, &Backend::notifyOneHashCalculated);
     connect(worker, &Worker::notifyWorkerFinished, thread, &QThread::quit);
     connect(worker, &Worker::notifyWorkerFinished, worker, &Worker::deleteLater);
+    connect(worker, &Worker::notifyWorkerFinished, this, &Backend::notifyOperationFinished);
+    connect(thread, &QThread::finished, thread, &QThread::deleteLater);
+    thread->start();
+}
+
+void Backend::compareFiles(const QString &first_file, const QString &second_file, const QString &alg_id)
+{
+    QHash<QString, QString> params;
+    params[HASH_PARAM::ALG_ID] = alg_id;
+    params[HASH_PARAM::FIRST_FILE] = first_file;
+    params[HASH_PARAM::SECOND_FILE] = second_file;
+    auto thread = new QThread();
+    auto worker = new Worker();
+    worker->setParams(params);
+    worker->moveToThread(thread);
+    connect(thread, &QThread::started, worker, &Worker::startCompareFiles);
+    connect(worker, &Worker::notifyWorkerFilesCompared, this, &Backend::notifyFilesCompared);
+    connect(worker, &Worker::notifyWorkerFinished, thread, &QThread::quit);
+    connect(worker, &Worker::notifyWorkerFinished, worker, &Worker::deleteLater);
+    connect(worker, &Worker::notifyWorkerFinished, this, &Backend::notifyOperationFinished);
     connect(thread, &QThread::finished, thread, &QThread::deleteLater);
     thread->start();
 }

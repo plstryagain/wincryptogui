@@ -1,6 +1,8 @@
 import QtQuick 2.0
 import QtQuick.Controls 2.5
 import QtQuick.Layouts 1.12
+import QtQuick.Dialogs 1.3
+import Qt.labs.platform 1.1
 
 import backend 1.0
 import "qrc:/dialogs/"
@@ -13,6 +15,38 @@ Page {
 
     WaitDialog {
         id: dlgWait
+    }
+
+    FileDialog {
+        id: dlgSelectFile
+
+        onAccepted: {
+            tfChooseFile.text = file.toString();
+        }
+    }
+
+    FileDialog {
+        id: dlgChooseFirstFile
+
+        onAccepted: {
+            tfChooseFirstFile.text = file.toString();
+        }
+    }
+
+    FileDialog {
+        id: dlgChooseSecondFile
+
+        onAccepted: {
+            tfChooseSecondFile.text = file.toString();
+        }
+    }
+
+    FolderDialog {
+        id: dlgSelectFolder
+
+        onAccepted: {
+            tfChooseFile.text = folder.toString();
+        }
     }
 
     ColumnLayout {
@@ -87,7 +121,6 @@ Page {
                     TextField {
                         Layout.fillWidth: true
                         id: tfChooseFile
-                        text: "D:\\ad.png"
 
                         ToolTip {
                             id: ttChooseFile
@@ -98,6 +131,14 @@ Page {
                     Button {
                         id: btnChooseFile
                         text: "..."
+
+                        onClicked: {
+                            if (rbOneFile.checked) {
+                                dlgSelectFile.open();
+                            } else {
+                                dlgSelectFolder.open();
+                            }
+                        }
                     }
                 }
             }
@@ -107,6 +148,60 @@ Page {
             id: gbCompareFiles
             Layout.fillWidth: true
             visible: false
+
+            ColumnLayout {
+                anchors.fill: parent
+                RowLayout {
+                    Layout.fillWidth: true
+                    Label {
+                        id: lbChooseFirstFile
+                        text: "Choose first file"
+                    }
+                    TextField {
+                        id: tfChooseFirstFile
+                        Layout.fillWidth: true
+
+                        ToolTip {
+                            id: ttChooseFIrstFile
+                            timeout: 3000
+                            visible: false
+                            text: "Choose first file!"
+                        }
+                    }
+                    Button {
+                        text: "..."
+
+                        onClicked: {
+                            dlgChooseFirstFile.open();
+                        }
+                    }
+                }
+                RowLayout {
+                    Layout.fillWidth: true
+                    Label {
+                        id: lbChooseSecondFile
+                        text: "Choose second file"
+                    }
+                    TextField {
+                        id: tfChooseSecondFile
+                        Layout.fillWidth: true
+
+                        ToolTip {
+                            id: ttChooseSecondFile
+                            timeout: 3000
+                            visible: false
+                            text: "Choose second file!"
+                        }
+                    }
+                    Button {
+                        text: "..."
+
+                        onClicked: {
+                            dlgChooseSecondFile.open();
+                        }
+                    }
+                }
+            }
         }
         Button {
             id: btnHash
@@ -124,7 +219,21 @@ Page {
                     }
                     let alg_id = cbHashAlgs.currentText;
                     dlgWait.open();
-                    backend.calculateHash(tfChooseFile.text, is_dir, alg_id);
+                    backend.calculateHash(path, is_dir, alg_id);
+                } else {
+                    let first_file = tfChooseFirstFile.text;
+                    let second_file = tfChooseSecondFile.text;
+                    if (first_file.length === 0) {
+                        ttChooseFIrstFile.visible = true;
+                        return;
+                    }
+                    if (second_file.length === 0) {
+                        ttChooseSecondFile.visible = true;
+                        return;
+                    }
+                    let alg_id = cbHashAlgs.currentText;
+                    dlgWait.open();
+                    backend.compareFiles(first_file, second_file, alg_id);
                 }
             }
         }
@@ -144,23 +253,42 @@ Page {
     Connections {
         target: backend
 
+        onNotifyOperationFinished: {
+            dlgWait.close();
+        }
+
         onNotifyHashAlsEnumComplete: {
             dlgWait.close();
             if (err === 0) {
                 cbHashAlgs.model = alg_id_list;
             } else {
                 console.log("error: " + err)
+                txtResult.append("Operation failed with error: " + err);
             }
         }
 
         onNotifyOneHashCalculated: {
-            dlgWait.close();
             if (err === 0) {
                 let str = "For file: " + file_name + "\nAlgorithm: " + alg_id + "\nHash: " + hash + "\n";
                 txtResult.append(str);
             } else {
                 let str = "For file: " + file_name + "\nAlgorithm: " + alg_id + "\nError: " + err + "\n";
                 txtResult.append(str);
+            }
+        }
+
+        onNotifyFilesCompared: {
+            if (err == 0) {
+                if (is_equal) {
+                    txtResult.append("Files are identical!");
+                    txtResult.append("Hash value: " + first_hash + "\n");
+                } else {
+                    txtResult.append("Files are not identical!");
+                    txtResult.append("First file hash value: " + first_hash);
+                    txtResult.append("Second file hash value: " + second_hash + "\n");
+                }
+            } else {
+                txtResult.append("Operation failed with error: " + err);
             }
         }
     }
