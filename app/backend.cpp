@@ -60,3 +60,34 @@ void Backend::compareFiles(const QString &first_file, const QString &second_file
     connect(thread, &QThread::finished, thread, &QThread::deleteLater);
     thread->start();
 }
+
+void Backend::enumRngAlgorithms()
+{
+    auto thread = new QThread();
+    auto worker = new Worker();
+    worker->moveToThread(thread);
+    connect(thread, &QThread::started, worker, &Worker::startEnumRngAlgorithms);
+    connect(worker, &Worker::notifyWorkerFinished, thread, &QThread::quit);
+    connect(worker, &Worker::notifyWorkerFinished, worker, &Worker::deleteLater);
+    connect(worker, &Worker::notifyWorkerRngAlgsEnumComplete, this, &Backend::notifyRngAlgsEnumComplete);
+    connect(thread, &QThread::finished, thread, &QThread::deleteLater);
+    thread->start();
+}
+
+void Backend::generateRandom(const QString &alg_id, const QString& size, const QString &out_form)
+{
+    QHash<QString, QString> params;
+    params[RNG_PARAM::ALG_ID] = alg_id;
+    params[RNG_PARAM::SIZE] = size;
+    params[RNG_PARAM::OUT_FORM] = out_form;
+    auto thread = new QThread();
+    auto worker = new Worker();
+    worker->setParams(params);
+    worker->moveToThread(thread);
+    connect(thread, &QThread::started, worker, &Worker::startGenerateRandomBytes);
+    connect(worker, &Worker::notifyWorkerRandomBytesGenerated, this, &Backend::notifyRandomBytesGenerated);
+    connect(worker, &Worker::notifyWorkerFinished, thread, &QThread::quit);
+    connect(worker, &Worker::notifyWorkerFinished, worker, &Worker::deleteLater);
+    connect(thread, &QThread::finished, thread, &QThread::deleteLater);
+    thread->start();
+}

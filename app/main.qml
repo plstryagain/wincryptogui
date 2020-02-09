@@ -42,8 +42,16 @@ ApplicationWindow {
                 text: qsTr("Hash")
                 width: parent.width
                 onClicked: {
-                    stackView.push("qrc:/pages/HashPage.qml")
-                    drawer.close()
+                    stackView.push("qrc:/pages/HashPage.qml");
+                    drawer.close();
+                }
+            }
+            ItemDelegate {
+                text: qsTr("Random number generator")
+                width: parent.width
+                onClicked: {
+                    stackView.push("qrc:/pages/RNGPage.qml");
+                    drawer.close();
                 }
             }
         }

@@ -1,6 +1,7 @@
 #include "worker.h"
 #include "constants.h"
 #include "errors.h"
+#include "rngmanager.h"
 
 #include <QDebug>
 #include <QFile>
@@ -15,7 +16,7 @@ Worker::Worker(QObject *parent) : QObject(parent)
 
 Worker::~Worker()
 {
-    qDebug() << "WORKER DESTROYED";
+
 }
 
 void Worker::setParams(const QHash<QString, QString> &params)
@@ -119,6 +120,52 @@ void Worker::startCompareFiles()
     bool is_equal = first_hash == second_hash;
     emit notifyWorkerFilesCompared(ERRORS::SUCCESS, first_hash.toHex(), second_hash.toHex(), is_equal);
     emit notifyWorkerFinished();
+}
+
+void Worker::startEnumRngAlgorithms()
+{
+    QStringList alg_id_list;
+    NTSTATUS err = RngManager().enumAlgorithms(alg_id_list);
+    emit notifyWorkerRngAlgsEnumComplete(static_cast<int>(err), alg_id_list);
+    emit notifyWorkerFinished();
+}
+
+void Worker::startGenerateRandomBytes()
+{
+    QString alg_id = params_[RNG_PARAM::ALG_ID];
+    int size = params_[RNG_PARAM::SIZE].toInt();
+    QString out_form = params_[RNG_PARAM::OUT_FORM];
+    if (alg_id.isEmpty() || out_form.isEmpty() || size < 1 || size > 99999) {
+        emit notifyWorkerRandomBytesGenerated(ERRORS::INVALID_PARAMETERS, "");
+        emit notifyWorkerFinished();
+        return;
+    }
+    RngManager rng;
+    QString bytes;
+    NTSTATUS err = rng.init(alg_id);
+    if (err != ERROR_SUCCESS) {
+        emit notifyWorkerRandomBytesGenerated(err, bytes);
+        emit notifyWorkerFinished();
+        return;
+    }
+    QByteArray buf;
+    buf.resize(size);
+    err = rng.generateRandom(reinterpret_cast<uchar*>(buf.data()), static_cast<ulong>(size));
+    if (err != ERROR_SUCCESS) {
+        emit notifyWorkerRandomBytesGenerated(err, bytes);
+        emit notifyWorkerFinished();
+        return;
+    }
+    if (out_form == "HEX") {
+        bytes.append(buf.toHex());
+    } else if (out_form == "Base64") {
+        bytes.append(buf.toBase64());
+    } else {
+        err = ERRORS::INVALID_OUT_FORM;
+    }
+    emit notifyWorkerRandomBytesGenerated(err, bytes);
+    emit notifyWorkerFinished();
+    return;
 }
 
 long Worker::calcualteHash(HashManager& hm, const QString &file_path, QByteArray &hash)

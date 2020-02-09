@@ -18,6 +18,7 @@ SOURCES += \
         constants.cpp \
         hashmanager.cpp \
         main.cpp \
+        rngmanager.cpp \
         worker.cpp
 
 RESOURCES += qml.qrc
@@ -38,6 +39,7 @@ HEADERS += \
     constants.h \
     errors.h \
     hashmanager.h \
+    rngmanager.h \
     worker.h
 
 LIBS += -lcrypt32 -lbcrypt

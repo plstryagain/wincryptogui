@@ -19,11 +19,16 @@ signals:
     void notifyWorkerOneHashCalculated(int err, QString alg_id, QString file_name, QString hash);
     void notifyWorkerFilesCompared(int err, QString first_hash, QString second_hash, bool is_equal);
 
+    void notifyWorkerRngAlgsEnumComplete(int err, QStringList alg_id_list);
+    void notifyWorkerRandomBytesGenerated(int err, QString bytes);
 public:
     void setParams(const QHash<QString, QString>& params);
     void startEnumHashAlgorithms();
     void startCalculateHash();
     void startCompareFiles();
+
+    void startEnumRngAlgorithms();
+    void startGenerateRandomBytes();
 
 private:
     long calcualteHash(HashManager &hm, const QString& file_path, QByteArray& hash);
