@@ -6,7 +6,7 @@ import backend 1.0
 import "qrc:/dialogs/"
 
 Page {
-
+    title: qsTr("RNG")
     Backend {
         id: backend
     }

@@ -18,6 +18,9 @@ signals:
     void notifyRngAlgsEnumComplete(int err, QStringList alg_id_list);
     void notifyRandomBytesGenerated(int err, QString bytes);
 
+    void notifyCipherAlgsEnumCompleted(int err, QStringList alg_id_list);
+    void notifyEncrypted(int err, QString cipher_text, QString salt);
+
 public slots:
     void enumHashAlgorithms();
     void calculateHash(const QString& path, const bool is_dir, const QString& alg_id);
@@ -25,6 +28,9 @@ public slots:
 
     void enumRngAlgorithms();
     void generateRandom(const QString& alg_id, const QString &size, const QString& out_form);
+
+    void enumCipherAlgorithms();
+    void encrypt(const QString& cipher_alg_id, const QString &pass, const QString& plain_text_file);
 };
 
 #endif // BACKEND_H

@@ -6,7 +6,7 @@ ApplicationWindow {
     visible: true
     width: 640
     height: 480
-    title: qsTr("Stack")
+    title: qsTr("Wincryptogui")
 
     header: ToolBar {
         contentHeight: toolButton.implicitHeight
@@ -51,6 +51,14 @@ ApplicationWindow {
                 width: parent.width
                 onClicked: {
                     stackView.push("qrc:/pages/RNGPage.qml");
+                    drawer.close();
+                }
+            }
+            ItemDelegate {
+                text: qsTr("Cipher")
+                width: parent.width
+                onClicked: {
+                    stackView.push("qrc:/pages/CipherPage.qml");
                     drawer.close();
                 }
             }

@@ -1,8 +1,12 @@
 #include "backend.h"
 #include "worker.h"
 #include "constants.h"
+#include "cryptooperations.h"
+#include "util.h"
+#include "errors.h"
 
 #include <QThread>
+#include <QUrl>
 #include <QDebug>
 
 Backend::Backend(QObject *parent) : QObject(parent)
@@ -88,6 +92,43 @@ void Backend::generateRandom(const QString &alg_id, const QString& size, const Q
     connect(worker, &Worker::notifyWorkerRandomBytesGenerated, this, &Backend::notifyRandomBytesGenerated);
     connect(worker, &Worker::notifyWorkerFinished, thread, &QThread::quit);
     connect(worker, &Worker::notifyWorkerFinished, worker, &Worker::deleteLater);
+    connect(thread, &QThread::finished, thread, &QThread::deleteLater);
+    thread->start();
+}
+
+void Backend::enumCipherAlgorithms()
+{
+    auto* thread = new QThread();
+    connect(thread, &QThread::started, [&](){
+        QStringList alg_id_list;
+        int err = CryptoOperations().enumAlgorithms("cipher", alg_id_list);
+        emit notifyCipherAlgsEnumCompleted(err, alg_id_list);
+    });
+    connect(thread, &QThread::finished, thread, &QThread::deleteLater);
+    thread->start();
+}
+
+void Backend::encrypt(const QString &cipher_alg_id, const QString& pass, const QString &plain_text_file)
+{
+    auto* thread = new QThread();
+    connect(thread, &QThread::started, [&, cipher_alg_id, pass, plain_text_file](){
+        Util util;
+        QByteArray plain_text;
+        /* QML FileDialog return path that begins with "file:///" */
+        int err = util.readFile(QUrl(plain_text_file).toLocalFile(), plain_text);
+        if (err != ERRORS::SUCCESS) {
+            emit notifyEncrypted(err, "", "");
+            return;
+        }
+        CryptoOperations cop;
+        QByteArray cipher_text, salt;
+        err = cop.encrypt(plain_text, pass, cipher_alg_id, cipher_text, salt);
+        if (err != ERRORS::SUCCESS) {
+            emit notifyEncrypted(err, "", "");
+            return;
+        }
+        emit notifyEncrypted(err, cipher_text.toBase64(), salt.toBase64());
+    });
     connect(thread, &QThread::finished, thread, &QThread::deleteLater);
     thread->start();
 }

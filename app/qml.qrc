@@ -6,5 +6,6 @@
         <file>pages/HashPage.qml</file>
         <file>dialogs/WaitDialog.qml</file>
         <file>pages/RNGPage.qml</file>
+        <file>pages/CipherPage.qml</file>
     </qresource>
 </RCC>

@@ -15,10 +15,14 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 SOURCES += \
         backend.cpp \
+        ciphermanager.cpp \
         constants.cpp \
+        cryptooperations.cpp \
+        errors.cpp \
         hashmanager.cpp \
         main.cpp \
         rngmanager.cpp \
+        util.cpp \
         worker.cpp
 
 RESOURCES += qml.qrc
@@ -36,10 +40,13 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 
 HEADERS += \
     backend.h \
+    ciphermanager.h \
     constants.h \
+    cryptooperations.h \
     errors.h \
     hashmanager.h \
     rngmanager.h \
+    util.h \
     worker.h
 
 LIBS += -lcrypt32 -lbcrypt

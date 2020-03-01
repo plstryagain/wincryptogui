@@ -8,7 +8,7 @@ import backend 1.0
 import "qrc:/dialogs/"
 
 Page {
-
+    title: qsTr("Hash")
     Backend {
         id: backend
     }
@@ -246,6 +246,7 @@ Page {
                 id: txtResult
                 implicitWidth: 100
                 readOnly: true
+                selectByMouse: true
             }
         }
     }
