@@ -32,6 +32,20 @@ Page {
         }
     }
 
+    FolderDialog {
+        id: dlgPathToSave
+
+        property string mode: "encrypt"
+
+        onAccepted: {
+            if (mode === "encrypt") {
+                tfPathToSaveCipher.text = folder.toString();
+            } else {
+
+            }
+        }
+    }
+
     ColumnLayout {
         anchors.fill: parent
         spacing: 10
@@ -138,6 +152,29 @@ Page {
                         dlgSelectFile.open();
                     }
                 }
+
+                Label {
+                    text: qsTr("Save to")
+                }
+                TextField {
+                    id: tfPathToSaveCipher
+                    Layout.fillWidth: true
+
+                    ToolTip {
+                        id: ttPathToSaveCipher
+                        timeout: 3000
+                        visible: false
+                        text: qsTr("Select where to save ciphertext!")
+                    }
+                }
+                Button {
+                    text: qsTr("...")
+
+                    onClicked: {
+                        dlgPathToSave.mode = "encrypt";
+                        dlgPathToSave.open();
+                    }
+                }
             }
         }
         GroupBox {
@@ -163,8 +200,13 @@ Page {
                         ttFileToEncrypt.visible = true;
                         return;
                     }
+                    if (tfPathToSaveCipher.text === '') {
+                        tfPathToSaveCipher.visible = true;
+                        return;
+                    }
+
                     dlgWait.open();
-                    backend.encrypt(cbAlgs.currentText, tfPass.text, tfFileToEncrypt.text);
+                    backend.encrypt(cbAlgs.currentText, tfPass.text, tfFileToEncrypt.text, tfPathToSaveCipher.text);
                 }
             }
         }
@@ -198,10 +240,7 @@ Page {
         onNotifyEncrypted: {
             dlgWait.close();
             if (err === 0) {
-                let salt_str = "Salt:\n" + salt + "\n";
-                let cipher_text_str = "Cipher_text:\n" + cipher_text + "\n";
-                txtResult.append(salt_str);
-                txtResult.append(cipher_text_str);
+                txtResult.append(cipher_text);
             } else {
                 console.log("error: " + err)
                 txtResult.append("Operation failed with error: " + err);

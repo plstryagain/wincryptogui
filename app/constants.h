@@ -17,4 +17,10 @@ extern const QString SIZE;
 extern const QString OUT_FORM;
 }
 
+namespace CIPHER_PARAM {
+extern const QString ITERATION_COUNT;
+extern const QString SALT;
+extern const QString ALG_ID;
+extern const QString CIPHER_TEXT;
+}
 #endif // CONSTANTS_H
