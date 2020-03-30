@@ -22,5 +22,7 @@ extern const QString ITERATION_COUNT;
 extern const QString SALT;
 extern const QString ALG_ID;
 extern const QString CIPHER_TEXT;
+extern const QString IV;
+extern const QString CHAINING_MODE;
 }
 #endif // CONSTANTS_H

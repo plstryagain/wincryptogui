@@ -27,7 +27,7 @@ Page {
             if (mode === "encrypt") {
                 tfFileToEncrypt.text = file.toString();
             } else {
-
+                tfFileToDecrypt.text = file.toString();
             }
         }
     }
@@ -41,7 +41,7 @@ Page {
             if (mode === "encrypt") {
                 tfPathToSaveCipher.text = folder.toString();
             } else {
-
+                tfPathToSavePlaintext.text = folder.toString();
             }
         }
     }
@@ -60,8 +60,12 @@ Page {
                 onCheckedChanged: {
                     if (checked) {
                         gbEncrypt.visible = true;
+                        cbAlgs.visible = true;
+                        lbSelectAlg.visible = true;
                     } else {
                         gbEncrypt.visible = false;
+                        cbAlgs.visible = false;
+                        lbSelectAlg.visible = false;
                     }
                 }
             }
@@ -72,8 +76,12 @@ Page {
                 onCheckedChanged: {
                     if (checked) {
                         gbDecrypt.visible = true;
+                        cbAlgs.visible = false;
+                        lbSelectAlg.visible = false;
                     } else {
                         gbDecrypt.visible = false;
+                        cbAlgs.visible = true;
+                        lbSelectAlg.visible = true;
                     }
                 }
             }
@@ -183,6 +191,86 @@ Page {
             visible: false
             GridLayout {
                 anchors.fill: parent
+                columns: 3
+                Label {
+                    text: qsTr("Enter password")
+                }
+                TextField {
+                    id: tfPassDec
+                    Layout.fillWidth: true
+                    passwordCharacter: "*"
+                    passwordMaskDelay: 3000
+                    echoMode: TextInput.Password
+
+                    property bool secret: true
+
+                    ToolTip {
+                        id: ttPassDec
+                        timeout: 3000
+                        visible: false
+                        text: qsTr("Enter password!")
+                    }
+                }
+                Button {
+                    id: btnShowPassDec
+                    text: tfPassDec.secret ? qsTr("Show") : qsTr("Hide")
+
+                    onClicked: {
+                        if (tfPassDec.secret) {
+                            tfPassDec.echoMode = TextInput.Normal;
+                            tfPassDec.secret = false;
+                        } else {
+                            tfPassDec.echoMode = TextInput.Password;
+                            tfPassDec.secret = true;
+                        }
+                    }
+                }
+                Label {
+                    text: qsTr("File to decrypt")
+                }
+                TextField {
+                    id: tfFileToDecrypt
+                    Layout.fillWidth: true
+
+                    ToolTip {
+                        id: ttFileToDecrypt
+                        timeout: 3000
+                        visible: false
+                        text: qsTr("Select file to Decrypt!")
+                    }
+                }
+                Button {
+                    text: qsTr("...")
+
+                    onClicked: {
+                        dlgSelectFile.mode = "decrypt";
+                        dlgSelectFile.open();
+                    }
+                }
+
+                Label {
+                    text: qsTr("Save to")
+                }
+                TextField {
+                    id: tfPathToSavePlaintext
+                    Layout.fillWidth: true
+
+                    ToolTip {
+                        id: ttPathToSavePlaintext
+                        timeout: 3000
+                        visible: false
+                        text: qsTr("Select where to save plaintext!")
+                    }
+                }
+                Button {
+                    text: qsTr("...")
+
+                    onClicked: {
+                        dlgPathToSave.mode = "decrypt";
+                        dlgPathToSave.open();
+                    }
+                }
+
             }
         }
         Button {
@@ -207,6 +295,21 @@ Page {
 
                     dlgWait.open();
                     backend.encrypt(cbAlgs.currentText, tfPass.text, tfFileToEncrypt.text, tfPathToSaveCipher.text);
+                } else {
+                    if (tfPassDec.text === '') {
+                        ttPassDec.visible = true;
+                        return;
+                    }
+                    if (tfFileToDecrypt.text === '') {
+                        ttFileToDecrypt.visible = true;
+                        return;
+                    }
+                    if (tfPathToSavePlaintext.text === '') {
+                        ttPathToSavePlaintext.visible = true;
+                        return;
+                    }
+                    dlgWait.open();
+                    backend.decrypt(tfPassDec.text, tfFileToDecrypt.text, tfPathToSavePlaintext.text);
                 }
             }
         }
@@ -241,6 +344,16 @@ Page {
             dlgWait.close();
             if (err === 0) {
                 txtResult.append(cipher_text);
+            } else {
+                console.log("error: " + err)
+                txtResult.append("Operation failed with error: " + err);
+            }
+        }
+
+        onNotifyDecrypted: {
+            dlgWait.close();
+            if (err === 0) {
+                txtResult.append(plain_text);
             } else {
                 console.log("error: " + err)
                 txtResult.append("Operation failed with error: " + err);

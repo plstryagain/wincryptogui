@@ -111,11 +111,11 @@ void Backend::enumCipherAlgorithms()
     thread->start();
 }
 
-void Backend::encrypt(const QString &cipher_alg_id, const QString& pass, const QString &plain_text_file,
+void Backend::encrypt(const QString &cipher_alg_id, QString pass, const QString &plain_text_file,
                       const QString& path_to_save)
 {
     auto* thread = new QThread();
-    connect(thread, &QThread::started, [&, cipher_alg_id, pass, plain_text_file](){
+    connect(thread, &QThread::started, [&, cipher_alg_id, pass, plain_text_file, path_to_save]() mutable {
         Util util;
         QByteArray plain_text;
         /* QML FileDialog return path that begins with "file:///" */
@@ -125,12 +125,15 @@ void Backend::encrypt(const QString &cipher_alg_id, const QString& pass, const Q
             return;
         }
         CryptoOperations cop;
-        QByteArray cipher_text, salt;
-        err = cop.encrypt(plain_text, pass, cipher_alg_id, cipher_text, salt);
+        QByteArray cipher_text, salt, iv;
+        QString chaining_mode = "cbc";
+        err = cop.encrypt(plain_text, pass, cipher_alg_id, chaining_mode, cipher_text, salt, iv);
         if (err != ERRORS::SUCCESS) {
+            pass.fill('0');
             emit notifyEncrypted(err, "");
             return;
         }
+        pass.fill('0');
         /* save to file in JSON:
          * {
          *  "iteration_count": number,
@@ -144,14 +147,61 @@ void Backend::encrypt(const QString &cipher_alg_id, const QString& pass, const Q
         jobj[CIPHER_PARAM::SALT] = QString(salt.toBase64());
         jobj[CIPHER_PARAM::ALG_ID] = cipher_alg_id;
         jobj[CIPHER_PARAM::CIPHER_TEXT] = QString(cipher_text.toBase64());
+        jobj[CIPHER_PARAM::CHAINING_MODE] = chaining_mode;
+        jobj[CIPHER_PARAM::IV] = QString(iv.toBase64());
         QJsonDocument cipher_doc(jobj);
         QByteArray cipher_doc_data = cipher_doc.toJson();
         QFileInfo fi(plain_text_file);
         QString full_path = QUrl(path_to_save).toLocalFile() + "/" + fi.fileName() + ".enc";
-        qDebug() << full_path;
         err = util.writeToFile(full_path, cipher_doc_data);
         emit notifyEncrypted(err, QString(cipher_doc_data));
     });
     connect(thread, &QThread::finished, thread, &QThread::deleteLater);
     thread->start();
+    pass.fill('0');
+}
+
+void Backend::decrypt(QString pass, const QString &cipher_text_file, const QString &path_to_save)
+{
+    auto* thread = new QThread();
+    connect(thread, &QThread::started, [&, pass, cipher_text_file, path_to_save] () mutable {
+        Util util;
+        QByteArray container;
+        /* QML FileDialog return path that begins with "file:///" */
+        int err = util.readFile(QUrl(cipher_text_file).toLocalFile(), container);
+        if (err != ERRORS::SUCCESS) {
+            emit notifyDecrypted(err, "");
+            return;
+        }
+        QJsonParseError jerr;
+        QJsonDocument jdoc = QJsonDocument::fromJson(container, &jerr);
+        if (jerr.error != QJsonParseError::NoError || jdoc.isEmpty()) {
+            emit notifyDecrypted(ERRORS::CIPHERTEXT_FILE_HAS_INVALID_FORMAT, "");
+            return;
+        }
+        QJsonObject jobj = jdoc.object();
+        int iteration_count = jobj[CIPHER_PARAM::ITERATION_COUNT].toInt();
+        QByteArray salt = QByteArray::fromBase64(jobj[CIPHER_PARAM::SALT].toString().toUtf8());
+        QString cipher_alg_id = jobj[CIPHER_PARAM::ALG_ID].toString();
+        QByteArray cipher_text = QByteArray::fromBase64(jobj[CIPHER_PARAM::CIPHER_TEXT].toString().toUtf8());
+        QString chaining_mode = jobj[CIPHER_PARAM::CHAINING_MODE].toString();
+        QByteArray iv = QByteArray::fromBase64(jobj[CIPHER_PARAM::IV].toString().toUtf8());
+        CryptoOperations cop;
+        QByteArray plain_text;
+        err = cop.decrypt(cipher_text, pass, cipher_alg_id, chaining_mode, iv, iteration_count, salt, plain_text);
+        if (err != ERRORS::SUCCESS) {
+            pass.fill('0');
+            emit notifyDecrypted(err, "");
+            return;
+        }
+        pass.fill('0');
+        QFileInfo fi(cipher_text_file);
+        QString full_path = QUrl(path_to_save).toLocalFile() + "/" + fi.baseName();
+        err = util.writeToFile(full_path, plain_text);
+        emit notifyDecrypted(err, plain_text);
+        return;
+    });
+    connect(thread, &QThread::finished, thread, &QThread::deleteLater);
+    thread->start();
+    pass.fill('0');
 }

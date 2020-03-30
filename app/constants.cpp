@@ -15,8 +15,10 @@ namespace RNG_PARAM {
 }
 
 namespace CIPHER_PARAM {
-const QString ITERATION_COUNT = "iteration_count";
-const QString SALT = "salt";
-const QString ALG_ID = "alg_id";
-const QString CIPHER_TEXT = "cipher_text";
+    const QString ITERATION_COUNT = "iteration_count";
+    const QString SALT = "salt";
+    const QString ALG_ID = "alg_id";
+    const QString CIPHER_TEXT = "cipher_text";
+    const QString IV = "iv";
+    const QString CHAINING_MODE = "chaining_mode";
 }

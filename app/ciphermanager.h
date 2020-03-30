@@ -23,6 +23,8 @@ public:
     NTSTATUS setChainingMode(const QString& mode);
     NTSTATUS encrypt(uchar* plain_text, ulong plain_text_len,
                      uchar* iv, ulong iv_len, uchar* cipher_text, ulong *cipher_text_len);
+    NTSTATUS decrypt(uchar* cipher_text, ulong cipher_text_len, uchar* iv, ulong iv_len,
+                     uchar* plain_text, ulong* plain_text_len);
 
 private:
     BCRYPT_ALG_HANDLE hAlg_ = nullptr;

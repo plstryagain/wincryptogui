@@ -115,5 +115,12 @@ NTSTATUS CipherManager::setChainingMode(const QString &mode)
 
 NTSTATUS CipherManager::encrypt(uchar *plain_text, ulong plain_text_len, uchar *iv, ulong iv_len, uchar *cipher_text, ulong* cipher_text_len)
 {
-    return BCryptEncrypt(hKey_, plain_text, plain_text_len, nullptr, iv, iv_len, cipher_text, *cipher_text_len, cipher_text_len, BCRYPT_BLOCK_PADDING);
+    return BCryptEncrypt(hKey_, plain_text, plain_text_len, nullptr, iv, iv_len, cipher_text,
+                         *cipher_text_len, cipher_text_len, BCRYPT_BLOCK_PADDING);
+}
+
+NTSTATUS CipherManager::decrypt(uchar *cipher_text, ulong cipher_text_len, uchar *iv, ulong iv_len, uchar *plain_text, ulong *plain_text_len)
+{
+    return BCryptDecrypt(hKey_, cipher_text, cipher_text_len, nullptr, iv, iv_len, plain_text,
+                         *plain_text_len, plain_text_len, BCRYPT_BLOCK_PADDING);
 }

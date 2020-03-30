@@ -7,4 +7,5 @@ Project can be build with Qt 12.6.
 ## Supported features.  
   
 * Hashing;  
-* Random numbers generation;
+* Random numbers generation;  
+* Encrypt\Decrypt files with password;

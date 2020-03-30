@@ -20,6 +20,7 @@ signals:
 
     void notifyCipherAlgsEnumCompleted(int err, QStringList alg_id_list);
     void notifyEncrypted(int err, QString cipher_text);
+    void notifyDecrypted(int err, QString plain_text);
 
 public slots:
     void enumHashAlgorithms();
@@ -30,7 +31,8 @@ public slots:
     void generateRandom(const QString& alg_id, const QString &size, const QString& out_form);
 
     void enumCipherAlgorithms();
-    void encrypt(const QString& cipher_alg_id, const QString &pass, const QString& plain_text_file, const QString &path_to_save);
+    void encrypt(const QString& cipher_alg_id, QString pass, const QString& plain_text_file, const QString &path_to_save);
+    void decrypt(QString pass, const QString& cipher_text_file, const QString &path_to_save);
 };
 
 #endif // BACKEND_H
