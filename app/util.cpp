@@ -1,5 +1,6 @@
 #include "util.h"
 #include "errors.h"
+#include "cngexceptions.h"
 
 #include <QFile>
 
@@ -20,6 +21,20 @@ int Util::readFile(const QString &path, QByteArray &content)
         return ERRORS::FAILED_TO_READ_FILE;
     }
     return ERRORS::SUCCESS;
+}
+
+QByteArray Util::readFile2(const QString &path)
+{
+    QFile file(path);
+    if (!file.open(QFile::ReadOnly)) {
+        throw CngExceptions(ERROR_OPEN_FAILED, "Failed to open file");
+    }
+    QByteArray content = file.readAll();
+    file.close();
+    if (content.isEmpty()) {
+        throw CngExceptions(ERROR_READ_FAULT, "Failed to read file");
+    }
+    return content;
 }
 
 int Util::writeToFile(const QString &path, const QByteArray &content)

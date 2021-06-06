@@ -3,8 +3,10 @@
 #include "hashmanager.h"
 #include "rngmanager.h"
 #include "ciphermanager.h"
+#include "cngexceptions.h"
 
 #include <QVector>
+#include <QFile>
 #include <QDebug>
 
 CryptoOperations::CryptoOperations()
@@ -12,13 +14,26 @@ CryptoOperations::CryptoOperations()
 
 }
 
+QStringList CryptoOperations::enumAlgorithms2(const QString &type)
+{
+    if (type == "hash") {
+        return HashManager().enumAlgorithms();
+    } else if (type == "rng") {
+        return RngManager().enumAlgorithms();
+    } else if (type == "cipher") {
+        return QStringList();
+    } else {
+        throw CngExceptions(NTE_BAD_ALGID, "Unsupproted algorithm");
+    }
+}
+
 int CryptoOperations::enumAlgorithms(const QString &type, QStringList &alg_id_list)
 {
     NTSTATUS status = ERROR_SUCCESS;
     if (type == "hash") {
-        status = HashManager().enumAlgorithms(alg_id_list);
+        alg_id_list = HashManager().enumAlgorithms();
     } else if (type == "rng") {
-        status = RngManager().enumAlgorithms(alg_id_list);
+        alg_id_list = RngManager().enumAlgorithms();
     } else if (type == "cipher") {
         status = CipherManager().enumAlgorithms(alg_id_list);
     } else {
@@ -27,24 +42,50 @@ int CryptoOperations::enumAlgorithms(const QString &type, QStringList &alg_id_li
     return Errors::ntstatusToErrorCode(status);
 }
 
+void CryptoOperations::generateRandomBytes(const QString& alg_id, const int size, const QString& out_form, QString& bytes)
+{
+    if (alg_id.isEmpty() || out_form.isEmpty() || size < 1 || size > 99999) {
+        throw CngExceptions(NTE_BAD_DATA, "Invalid arguments provided");
+    }
+    RngManager rng{ alg_id };
+    QByteArray buf;
+    buf.resize(size);
+    rng.generateRandom(reinterpret_cast<uchar*>(buf.data()), static_cast<ulong>(size));
+    if (out_form == "HEX") {
+        bytes.append(buf.toHex());
+    } else if (out_form == "Base64") {
+        bytes.append(buf.toBase64());
+    } else {
+        throw CngExceptions(NTE_BAD_DATA, "Invalid arguments provided");
+    }
+}
+
+QByteArray CryptoOperations::calcualteHash(const QByteArray& data_to_hash, const QString& alg_id)
+{
+    HashManager hm{ alg_id };
+    hm.createHash();
+    unsigned long hash_size = hm.getHashSize();
+    hm.stepHash(const_cast<uchar*>(reinterpret_cast<const uchar*>(data_to_hash.data())),
+                static_cast<ulong>(data_to_hash.size()));
+    QByteArray hash;
+    hash.resize(static_cast<int>(hash_size));
+    hm.finishHash(reinterpret_cast<uchar*>(hash.data()), static_cast<ulong>(hash.size()));
+    hm.destroyHash();
+    return hash;
+}
+
+
 int CryptoOperations::encrypt(const QByteArray &plain_text, const QString &pass,
                               const QString &cipher_alg_id, const QString &chaining_mode, QByteArray &cipher_text,
                               QByteArray& salt, QByteArray &iv)
 {
     /* generate random salt */
-    RngManager rng;
-    long status = rng.init("RNG");
-    if (status != ERROR_SUCCESS) {
-        return Errors::ntstatusToErrorCode(status);
-    }
+    RngManager rng("RNG");
     int salt_len = 8;
     salt.resize(salt_len);
-    status = rng.generateRandom(reinterpret_cast<uchar*>(salt.data()), static_cast<ulong>(salt_len));
-    if (status != ERROR_SUCCESS) {
-        return Errors::ntstatusToErrorCode(status);
-    }
+    rng.generateRandom(reinterpret_cast<uchar*>(salt.data()), static_cast<ulong>(salt_len));
     CipherManager ciph;
-    status = ciph.init(cipher_alg_id);
+    long status = ciph.init(cipher_alg_id);
     if (status != ERROR_SUCCESS) {
         return Errors::ntstatusToErrorCode(status);
     }
@@ -69,10 +110,7 @@ int CryptoOperations::encrypt(const QByteArray &plain_text, const QString &pass,
             break;
         }
         iv.resize(static_cast<int>(block_len));
-        status = rng.generateRandom(reinterpret_cast<uchar*>(iv.data()), block_len);
-        if (status != ERROR_SUCCESS) {
-            break;
-        }
+        rng.generateRandom(reinterpret_cast<uchar*>(iv.data()), block_len);
         /* set chaining mode */
         status = ciph.setChainingMode(chaining_mode);
         if (status != ERROR_SUCCESS) {
@@ -150,3 +188,4 @@ int CryptoOperations::decrypt(const QByteArray &cipher_text, const QString &pass
     SecureZeroMemory(derived_key.data(), derived_key.size());
     return Errors::ntstatusToErrorCode(status);
 }
+

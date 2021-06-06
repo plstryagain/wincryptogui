@@ -258,7 +258,7 @@ Page {
             dlgWait.close();
         }
 
-        onNotifyHashAlsEnumComplete: {
+        onNotifyHashAlgsEnumComplete: {
             dlgWait.close();
             if (err === 0) {
                 cbHashAlgs.model = alg_id_list;

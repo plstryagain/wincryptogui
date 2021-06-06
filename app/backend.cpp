@@ -1,15 +1,16 @@
 #include "backend.h"
-#include "worker.h"
 #include "constants.h"
 #include "cryptooperations.h"
 #include "util.h"
 #include "errors.h"
+#include "cngexceptions.h"
 
 #include <QThread>
 #include <QUrl>
 #include <QJsonObject>
 #include <QJsonDocument>
 #include <QFileInfo>
+#include <QDirIterator>
 #include <QDebug>
 
 Backend::Backend(QObject *parent) : QObject(parent)
@@ -19,96 +20,98 @@ Backend::Backend(QObject *parent) : QObject(parent)
 
 void Backend::enumHashAlgorithms()
 {
-    auto thread = new QThread();
-    auto worker = new Worker();
-    worker->moveToThread(thread);
-    connect(thread, &QThread::started, worker, &Worker::startEnumHashAlgorithms);
-    connect(worker, &Worker::notifyWorkerFinished, thread, &QThread::quit);
-    connect(worker, &Worker::notifyWorkerFinished, worker, &Worker::deleteLater);
-    connect(worker, &Worker::notifyWorkerHashAlgsEnumComplete, this, &Backend::notifyHashAlsEnumComplete);
-    connect(thread, &QThread::finished, thread, &QThread::deleteLater);
-    thread->start();
+    enumAlgorithms("hash", [&](int err, QStringList alg_id_list){
+        emit this->notifyHashAlgsEnumComplete(err, alg_id_list);
+    });
 }
 
 void Backend::calculateHash(const QString &path, const bool is_dir, const QString &alg_id)
 {
-    QHash<QString, QString> params;
-    params[HASH_PARAM::PATH] = path;
-    params[HASH_PARAM::IS_DIR] = is_dir ? "true" : "false";
-    params[HASH_PARAM::ALG_ID] = alg_id;
-    auto thread = new QThread();
-    auto worker = new Worker();
-    worker->setParams(params);
-    worker->moveToThread(thread);
-    connect(thread, &QThread::started, worker, &Worker::startCalculateHash);
-    connect(worker, &Worker::notifyWorkerOneHashCalculated, this, &Backend::notifyOneHashCalculated);
-    connect(worker, &Worker::notifyWorkerFinished, thread, &QThread::quit);
-    connect(worker, &Worker::notifyWorkerFinished, worker, &Worker::deleteLater);
-    connect(worker, &Worker::notifyWorkerFinished, this, &Backend::notifyOperationFinished);
+    auto thread = QThread::create([&](const QString &path_, const bool is_dir_, const QString &alg_id_){
+        try {
+            QString local_path = QUrl(path_).toLocalFile();
+            Util util;
+            CryptoOperations co;
+            if (!is_dir_) {
+                /* QML FileDialog return path that begins with "file:///" */
+                QByteArray content = util.readFile2(local_path);
+                QByteArray hash = co.calcualteHash(content, alg_id_);
+                emit this->notifyOneHashCalculated(ERROR_SUCCESS, alg_id_, path_, hash.toHex());
+                emit this->notifyOperationFinished();
+            } else {
+                QDirIterator it(local_path, QDir::Files, QDirIterator::Subdirectories);
+                while (it.hasNext()) {
+                    QString cur_path = it.next();
+                    QByteArray content = util.readFile2(cur_path);
+                    QByteArray hash = co.calcualteHash(content, alg_id_);
+                    emit this->notifyOneHashCalculated(ERROR_SUCCESS, alg_id_, path_, hash.toHex());
+                }
+                emit this->notifyOperationFinished();
+            }
+        } catch (CngExceptions& e) {
+            emit this->notifyOneHashCalculated(e.getStatus(), alg_id_, path_, QString());
+            emit this->notifyOperationFinished();
+        }
+    },
+    path, is_dir, alg_id);
     connect(thread, &QThread::finished, thread, &QThread::deleteLater);
     thread->start();
 }
 
 void Backend::compareFiles(const QString &first_file, const QString &second_file, const QString &alg_id)
 {
-    QHash<QString, QString> params;
-    params[HASH_PARAM::ALG_ID] = alg_id;
-    params[HASH_PARAM::FIRST_FILE] = first_file;
-    params[HASH_PARAM::SECOND_FILE] = second_file;
-    auto thread = new QThread();
-    auto worker = new Worker();
-    worker->setParams(params);
-    worker->moveToThread(thread);
-    connect(thread, &QThread::started, worker, &Worker::startCompareFiles);
-    connect(worker, &Worker::notifyWorkerFilesCompared, this, &Backend::notifyFilesCompared);
-    connect(worker, &Worker::notifyWorkerFinished, thread, &QThread::quit);
-    connect(worker, &Worker::notifyWorkerFinished, worker, &Worker::deleteLater);
-    connect(worker, &Worker::notifyWorkerFinished, this, &Backend::notifyOperationFinished);
+    auto thread = QThread::create([&](const QString &first_file_, const QString &second_file_, const QString &alg_id_) {
+        QString local_path_first = QUrl(first_file_).toLocalFile();
+        QString local_path_second = QUrl(second_file_).toLocalFile();
+        Util util;
+        CryptoOperations co;
+        try {
+            QByteArray content_file_first = util.readFile2(local_path_first);
+            QByteArray hash_first = co.calcualteHash(content_file_first, alg_id_);
+            QByteArray content_file_second = util.readFile2(local_path_second);
+            QByteArray hash_second = co.calcualteHash(content_file_second, alg_id_);
+            bool is_equal = (hash_first == hash_second);
+            emit this->notifyFilesCompared(ERROR_SUCCESS, hash_first.toHex(), hash_second.toHex(), is_equal);
+            emit this->notifyOperationFinished();
+        } catch (CngExceptions& e) {
+            emit this->notifyFilesCompared(e.getStatus(), QString(), QString(), false);
+            emit this->notifyOperationFinished();
+        }
+    },
+    first_file, second_file, alg_id);
     connect(thread, &QThread::finished, thread, &QThread::deleteLater);
     thread->start();
 }
 
 void Backend::enumRngAlgorithms()
 {
-    auto thread = new QThread();
-    auto worker = new Worker();
-    worker->moveToThread(thread);
-    connect(thread, &QThread::started, worker, &Worker::startEnumRngAlgorithms);
-    connect(worker, &Worker::notifyWorkerFinished, thread, &QThread::quit);
-    connect(worker, &Worker::notifyWorkerFinished, worker, &Worker::deleteLater);
-    connect(worker, &Worker::notifyWorkerRngAlgsEnumComplete, this, &Backend::notifyRngAlgsEnumComplete);
-    connect(thread, &QThread::finished, thread, &QThread::deleteLater);
-    thread->start();
+    enumAlgorithms("rng", [&](int err, QStringList alg_id_list){
+        emit this->notifyRngAlgsEnumComplete(err, alg_id_list);
+    });
 }
 
 void Backend::generateRandom(const QString &alg_id, const QString& size, const QString &out_form)
 {
-    QHash<QString, QString> params;
-    params[RNG_PARAM::ALG_ID] = alg_id;
-    params[RNG_PARAM::SIZE] = size;
-    params[RNG_PARAM::OUT_FORM] = out_form;
-    auto thread = new QThread();
-    auto worker = new Worker();
-    worker->setParams(params);
-    worker->moveToThread(thread);
-    connect(thread, &QThread::started, worker, &Worker::startGenerateRandomBytes);
-    connect(worker, &Worker::notifyWorkerRandomBytesGenerated, this, &Backend::notifyRandomBytesGenerated);
-    connect(worker, &Worker::notifyWorkerFinished, thread, &QThread::quit);
-    connect(worker, &Worker::notifyWorkerFinished, worker, &Worker::deleteLater);
-    connect(thread, &QThread::finished, thread, &QThread::deleteLater);
+    auto thread = QThread::create([&](const QString &alg_id_, const QString& size_, const QString &out_form_){
+        try {
+            QString bytes;
+            CryptoOperations().generateRandomBytes(alg_id_, size_.toInt(), out_form_, bytes);
+            emit this->notifyRandomBytesGenerated(ERROR_SUCCESS, bytes);
+            emit this->notifyOperationFinished();
+        } catch (CngExceptions& e) {
+            emit this->notifyRandomBytesGenerated(e.getStatus(), QString());
+            emit this->notifyOperationFinished();
+        }
+    },
+    alg_id, size, out_form);
     thread->start();
 }
 
 void Backend::enumCipherAlgorithms()
 {
-    auto* thread = new QThread();
-    connect(thread, &QThread::started, [&](){
-        QStringList alg_id_list;
-        int err = CryptoOperations().enumAlgorithms("cipher", alg_id_list);
-        emit notifyCipherAlgsEnumCompleted(err, alg_id_list);
+    enumAlgorithms("cipher", [&](int err, QStringList alg_id_list){
+        emit this->notifyCipherAlgsEnumCompleted(err, alg_id_list);
     });
-    connect(thread, &QThread::finished, thread, &QThread::deleteLater);
-    thread->start();
 }
 
 void Backend::encrypt(const QString &cipher_alg_id, QString pass, const QString &plain_text_file,
@@ -204,4 +207,18 @@ void Backend::decrypt(QString pass, const QString &cipher_text_file, const QStri
     connect(thread, &QThread::finished, thread, &QThread::deleteLater);
     thread->start();
     pass.fill('0');
+}
+
+void Backend::enumAlgorithms(const QString &type, std::function<void (int, QStringList)> notify_signal)
+{
+    auto thread = QThread::create([type, notify_signal](){
+        try {
+            QStringList alg_id_list = CryptoOperations().enumAlgorithms2(type);
+            notify_signal(ERROR_SUCCESS, alg_id_list);
+        } catch (CngExceptions& e) {
+            notify_signal(e.getStatus(), QStringList());
+        }
+    });
+    connect(thread, &QThread::finished, thread, &QThread::deleteLater);
+    thread->start();
 }

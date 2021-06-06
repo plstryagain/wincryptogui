@@ -9,12 +9,12 @@ class RngManager
 {
 public:
     RngManager();
+    RngManager(const QString &alg_id);
     ~RngManager();
 
 public:
-    NTSTATUS enumAlgorithms(QStringList &alg_id_list) const;
-    NTSTATUS init(const QString& alg_id);
-    NTSTATUS generateRandom(uchar* buf, const ulong size) const;
+    QStringList enumAlgorithms() const;
+    void generateRandom(uchar* buf, const ulong size) const;
 
 private:
     BCRYPT_ALG_HANDLE hAlg_ = nullptr;

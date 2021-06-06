@@ -9,16 +9,16 @@ class HashManager
 {
 public:
     HashManager();
+    HashManager(const QString& alg_id);
     ~HashManager();
 
 public:
-    NTSTATUS enumAlgorithms(QStringList &alg_id_list) const;
-    NTSTATUS init(const QString& alg_id);
+    QStringList enumAlgorithms() const;
     unsigned long getHashSize() const;
-    NTSTATUS createHash();
-    NTSTATUS stepHash(uchar* data, ulong size) const;
-    NTSTATUS finishHash(uchar *result, ulong size) const;
-    NTSTATUS destroyHash();
+    void createHash();
+    void stepHash(uchar* data, ulong size) const;
+    void finishHash(uchar *result, ulong size) const;
+    void destroyHash();
 
 private:
     BCRYPT_ALG_HANDLE hAlg_ = nullptr;

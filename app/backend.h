@@ -3,6 +3,8 @@
 
 #include <QObject>
 
+#include <functional>
+
 class Backend : public QObject
 {
     Q_OBJECT
@@ -11,7 +13,7 @@ public:
 
 signals:
     void notifyOperationFinished();
-    void notifyHashAlsEnumComplete(int err, QStringList alg_id_list);
+    void notifyHashAlgsEnumComplete(int err, QStringList alg_id_list);
     void notifyOneHashCalculated(int err, QString alg_id, QString file_name, QString hash);
     void notifyFilesCompared(int err, QString first_hash, QString second_hash, bool is_equal);
 
@@ -33,6 +35,9 @@ public slots:
     void enumCipherAlgorithms();
     void encrypt(const QString& cipher_alg_id, QString pass, const QString& plain_text_file, const QString &path_to_save);
     void decrypt(QString pass, const QString& cipher_text_file, const QString &path_to_save);
+
+private:
+    void enumAlgorithms(const QString& type, std::function<void(int err, QStringList alg_id_list)> notify_signal);
 };
 
 #endif // BACKEND_H
